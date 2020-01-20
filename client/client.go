@@ -5,6 +5,7 @@ import (
 	"fmt"
 	pb "github.com/matheusjbatista/bergoglio/proto"
 	"google.golang.org/grpc"
+	"io"
 	"log"
 	"time"
 )
@@ -35,9 +36,34 @@ func printManyCodes(client pb.BergoglioClient, manyCodesRequest *pb.ManyCodesReq
 	fmt.Println(codes)
 }
 
+func printManyCodesStream(client pb.BergoglioClient, manyCodesRequest *pb.ManyCodesRequest) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	codesStream, err := client.GetManyCodesStream(ctx, manyCodesRequest)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for {
+		streamRecovery, err := codesStream.Recv()
+
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println("Stream data: ", streamRecovery.Codes)
+	}
+}
+
 func main() {
 	opts := []grpc.DialOption{grpc.WithInsecure()}
-	serverConnection, err := grpc.Dial("localhost:58147", opts...)
+	serverConnection, err := grpc.Dial("localhost:8563", opts...)
 
 	if err != nil {
 		log.Fatalf("Erro ao comunicar com servidor: %v", err)
@@ -46,10 +72,18 @@ func main() {
 
 	client := pb.NewBergoglioClient(serverConnection)
 
-	//printOneCodeWithBlessing(client, &pb.Entry{Name: "Matheus Batista"})
-	printManyCodes(client, &pb.ManyCodesRequest{
+	manyCodesRequest := &pb.ManyCodesRequest{
 		SerialNumberInit:  88,
 		SerialNumberFinal: 99,
-		QuantityPerSerie:  44,
-	})
+		QuantityPerSerie:  90000,
+	}
+
+	printManyCodesStream(client, manyCodesRequest)
+
+	//printOneCodeWithBlessing(client, &pb.Entry{Name: "Matheus Batista"})
+	// printManyCodes(client, &pb.ManyCodesRequest{
+	// 	SerialNumberInit:  88,
+	// 	SerialNumberFinal: 99,
+	// 	QuantityPerSerie:  900,
+	// })
 }

@@ -39,20 +39,33 @@ func (s *codeServer) GetManyCodes(ctx context.Context, manyCodesRequest *pb.Many
 	return &pb.ManyCodesResponse{Codes: codes}, nil
 }
 
-func newServer() *codeServer {
-	server := &codeServer{}
-	return server
+func (s *codeServer) GetManyCodesStream(manyCodesRequest *pb.ManyCodesRequest, stream pb.Bergoglio_GetManyCodesStreamServer) error {
+	fmt.Println("Caiu aqui no stream em stream")
+	promotionalCodeSerialAndOrder := &generateCode.PromotionalCodeSerialAndOrder{
+		SerialNumberInit:  manyCodesRequest.GetSerialNumberInit(),
+		SerialNumberFinal: manyCodesRequest.GetSerialNumberFinal(),
+		QuantityPerSerie:  manyCodesRequest.GetQuantityPerSerie(),
+	}
+
+	codes := generateCode.Generate(promotionalCodeSerialAndOrder)
+
+	response := &pb.ManyCodesResponse{Codes: codes}
+
+	if err := stream.Send(response); err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {
-	port := 58147
+	port := 8563
 	flag.Parse()
-	listiner, err := net.Listen("tcp4", fmt.Sprintf("https://localhost:%d", port))
+	listiner, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		log.Fatalf("Falhou ao subir o servidor: %v", err)
 	}
 	grpcServer := grpc.NewServer()
-	pb.RegisterBergoglioServer(grpcServer, newServer())
+	pb.RegisterBergoglioServer(grpcServer, &codeServer{})
 	fmt.Printf("Servidor rodando na porta: %v", port)
 	grpcServer.Serve(listiner)
 }
