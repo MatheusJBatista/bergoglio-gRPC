@@ -73,9 +73,9 @@ func main() {
 	client := pb.NewBergoglioClient(serverConnection)
 
 	manyCodesRequest := &pb.ManyCodesRequest{
-		SerialNumberInit:  88,
-		SerialNumberFinal: 99,
-		QuantityPerSerie:  90000,
+		SerialNumberInit:  0,
+		SerialNumberFinal: 999,
+		QuantityPerSerie:  10000,
 	}
 
 	printManyCodesStream(client, manyCodesRequest)

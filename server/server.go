@@ -48,12 +48,23 @@ func (s *codeServer) GetManyCodesStream(manyCodesRequest *pb.ManyCodesRequest, s
 	}
 
 	codes := generateCode.Generate(promotionalCodeSerialAndOrder)
+	start, toGet, toIncrease, isEndStream := 0, len(codes)/(len(codes)/100000), len(codes)/(len(codes)/100000), false
 
-	response := &pb.ManyCodesResponse{Codes: codes}
+	for !isEndStream {
+		if err := stream.Send(&pb.ManyCodesResponse{
+			Codes: codes[start:toGet],
+		}); err != nil {
+			return err
+		}
 
-	if err := stream.Send(response); err != nil {
-		return err
+		start += toIncrease
+		toGet += toIncrease
+
+		if start == len(codes) {
+			isEndStream = true
+		}
 	}
+
 	return nil
 }
 
